@@ -1,5 +1,9 @@
 # @noobdigital/react-native-shieldscan
 
+[![npm version](https://img.shields.io/npm/v/@noobdigital/react-native-shieldscan.svg)](https://www.npmjs.com/package/@noobdigital/react-native-shieldscan)
+[![npm downloads](https://img.shields.io/npm/dm/@noobdigital/react-native-shieldscan.svg)](https://www.npmjs.com/package/@noobdigital/react-native-shieldscan)
+[![license](https://img.shields.io/npm/l/@noobdigital/react-native-shieldscan.svg)](LICENSE)
+
 Runtime security checks for React Native apps — jailbreak/root detection, Frida instrumentation detection, debugger detection, and emulator detection.
 
 Supports **Old Architecture** (Bridge) and **New Architecture** (Turbo Modules / JSI), React Native 0.70+.
