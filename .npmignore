@@ -1,0 +1,27 @@
+# Development artifacts
+__tests__/
+example/
+.github/
+coverage/
+node_modules/
+
+# Build intermediates
+android/build/
+android/.cxx/
+android/.gradle/
+ios/build/
+lib/
+
+# Config files not needed at runtime
+.eslintrc.js
+.eslintignore
+tsconfig*.json
+babel.config.js
+jest.config.js
+*.log
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- react-native-shieldscan does not declare any permissions.
+       Socket connections to 127.0.0.1 for Frida port detection
+       do not require INTERNET permission on Android. -->
+</manifest>

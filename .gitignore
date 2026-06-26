@@ -1,0 +1,28 @@
+node_modules/
+lib/
+coverage/
+*.log
+
+# Android
+android/build/
+android/.cxx/
+android/.gradle/
+
+# iOS
+ios/build/
+ios/Pods/
+*.xcworkspace
+
+# Example
+example/node_modules/
+example/android/build/
+example/android/.gradle/
+example/ios/build/
+example/ios/Pods/
+example/ios/*.xcworkspace
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
