@@ -62,5 +62,5 @@ dependencies {
   // RootBeer: comprehensive root detection
   // Using compileOnly is intentional if the host app already includes it;
   // switch to 'implementation' if you want it bundled unconditionally.
-  implementation 'com.scottyab:rootbeer-lib:0.1.0'
+  implementation 'com.scottyab:rootbeer-lib:0.1.1'
 }

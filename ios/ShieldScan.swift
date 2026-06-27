@@ -1,17 +1,13 @@
 import Foundation
 import React
+import Darwin
+import MachO.dyld
 
 /**
  * ShieldScan - iOS Native Security Module
  *
  * Performs runtime security checks for @noobdigital/react-native-shieldscan.
  * Compatible with both Old Architecture (Bridge) and New Architecture (JSI).
- *
- * Checks performed:
- *  - Jailbreak detection via file path scanning + write test
- *  - Frida detection via dylib injection, port 27042, env var
- *  - Debugger detection via ptrace / kinfo_proc
- *  - Simulator detection via targetEnvironment compiler directive
  */
 @objc(ShieldScan)
 class ShieldScan: NSObject {
@@ -29,6 +25,7 @@ class ShieldScan: NSObject {
       "fridaDetected": isFridaDetected(),
       "debugger":      isDebuggerAttached(),
       "emulator":      isSimulator(),
+      "hooksDetected": isHookingFrameworkPresent(),
     ]
     resolve(result)
   }
@@ -36,12 +33,17 @@ class ShieldScan: NSObject {
   // ─── Jailbreak Detection ──────────────────────────────────────────────────
 
   /**
-   * Multi-vector jailbreak detection:
-   * 1. Known jailbreak file paths (Cydia, MobileSubstrate, bash, ssh, apt)
-   * 2. Write test to /private (sandboxed apps cannot write outside their container)
-   * 3. Symbolic link test for /Applications (jailbroken devices remount this)
+   * IMPORTANT: Jailbreak checks are disabled on the iOS Simulator.
+   *
+   * Reason:
+   * The simulator environment contains many filesystem paths that also exist
+   * on jailbroken devices (e.g., /bin/bash, /usr/sbin/sshd, /etc/apt).
+   * These come from macOS, not from a jailbreak.
    */
   private func isJailbroken() -> Bool {
+    #if targetEnvironment(simulator)
+    return false
+    #endif
 
     let jailbreakPaths = [
       "/Applications/Cydia.app",
@@ -68,25 +70,55 @@ class ShieldScan: NSObject {
       try "shieldscan_test".write(toFile: testPath, atomically: true, encoding: .utf8)
       try? FileManager.default.removeItem(atPath: testPath)
       return true
-    } catch {
-      // Expected on a clean device — write is blocked
-    }
+    } catch {}
 
-    // Symbolic link check: jailbroken devices relink /Applications
+    // Symbolic link check
     if let _ = try? FileManager.default.destinationOfSymbolicLink(atPath: "/Applications") {
       return true
     }
 
     return false
+  }
+
+  // ─── Hook Detection ───────────────────────────────────────────────────────
+
+  /**
+   * Detects presence of common iOS runtime hooking frameworks.
+   *
+   * Strategy:
+   *  - Scan loaded dynamic libraries via dyld
+   *  - Look for known hooking-related substrings
+   */
+  private func isHookingFrameworkPresent() -> Bool {
+    #if targetEnvironment(simulator)
+    return false
     #endif
+    let hookIndicators = [
+      "Substrate",
+      "MobileSubstrate",
+      "SubstrateLoader",
+      "Substitute",
+      "TweakInject",
+      "LibHooker",
+    ]
+
+    let imageCount = _dyld_image_count()
+    for i in 0..<imageCount {
+      if let cName = _dyld_get_image_name(i) {
+        let name = String(cString: cName)
+        for indicator in hookIndicators {
+          if name.localizedCaseInsensitiveContains(indicator) {
+            return true
+          }
+        }
+      }
+    }
+
+    return false
   }
 
   // ─── File-Based Checks ────────────────────────────────────────────────────
 
-  /**
-   * Checks for Frida agent dylib on disk.
-   * Covers the default Frida gadget injection path on iOS.
-   */
   private func hasSuspiciousFiles() -> Bool {
     let suspiciousPaths = [
       "/usr/lib/frida/frida-agent.dylib",
@@ -97,23 +129,14 @@ class ShieldScan: NSObject {
 
   // ─── Frida Detection ─────────────────────────────────────────────────────
 
-  /**
-   * Multi-vector Frida detection:
-   * 1. dlopen for injected Frida dylibs
-   * 2. TCP port 27042 (Frida server default)
-   * 3. FRIDA_DEBUG environment variable
-   */
   private func isFridaDetected() -> Bool {
-    // Dylib injection check
     let fridaDylibs = ["frida-agent.dylib", "FridaGadget.dylib"]
     for dylib in fridaDylibs {
       if dlopen(dylib, RTLD_NOW) != nil { return true }
     }
 
-    // Port check
     if isFridaPortOpen(port: 27042) { return true }
 
-    // Environment variable (useful in some server-side Frida setups)
     if ProcessInfo.processInfo.environment["FRIDA_DEBUG"] != nil { return true }
 
     return false
@@ -138,11 +161,10 @@ class ShieldScan: NSObject {
 
   // ─── Debugger Detection ──────────────────────────────────────────────────
 
-  /**
-   * Detects if a debugger is attached using the P_TRACED flag via sysctl.
-   * Works for both lldb (Xcode) and ADB-based debuggers.
-   */
   private func isDebuggerAttached() -> Bool {
+    #if targetEnvironment(simulator)
+    return false
+    #endif
     var info = kinfo_proc()
     var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
     var size = MemoryLayout<kinfo_proc>.stride
@@ -152,10 +174,6 @@ class ShieldScan: NSObject {
 
   // ─── Simulator Detection ──────────────────────────────────────────────────
 
-  /**
-   * Detects iOS Simulator at compile time.
-   * This is a zero-cost check — the compiler strips the other branch entirely.
-   */
   private func isSimulator() -> Bool {
     #if targetEnvironment(simulator)
     return true

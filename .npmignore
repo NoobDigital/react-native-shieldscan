@@ -10,7 +10,6 @@ android/build/
 android/.cxx/
 android/.gradle/
 ios/build/
-lib/
 
 # Config files not needed at runtime
 .eslintrc.js
