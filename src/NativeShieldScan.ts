@@ -17,6 +17,10 @@ export interface SecurityScanResult {
   debugger: boolean;
   /** True if running on an emulator or simulator */
   emulator: boolean;
+   /**
+   * True if a runtime hooking framework is detected.
+   */
+  hooksDetected: boolean;
 }
 
 export interface Spec extends TurboModule {
