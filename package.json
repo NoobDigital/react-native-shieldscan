@@ -1,6 +1,6 @@
 {
   "name": "@noobdigital/react-native-shieldscan",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Runtime security checks for React Native: jailbreak/root detection, Frida, debugger, and emulator detection. Supports Old and New Architecture.",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
