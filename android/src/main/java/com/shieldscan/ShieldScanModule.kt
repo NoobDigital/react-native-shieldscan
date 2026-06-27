@@ -2,9 +2,13 @@ package com.shieldscan
 
 import android.os.Build
 import android.os.Debug
+import android.provider.Settings
+import android.util.Log
 import com.facebook.react.bridge.*
 import com.scottyab.rootbeer.RootBeer
+import java.io.BufferedReader
 import java.io.File
+import java.io.FileReader
 import java.net.Socket
 
 /**
@@ -15,10 +19,11 @@ import java.net.Socket
  *
  * Checks performed:
  *  - Root detection via RootBeer library
- *  - File-based root detection (Magisk, Xposed, su binaries)
+ *  - File-based root detection (Magisk, SuperSU, su binaries)
  *  - Frida detection (file paths + TCP port 27042)
  *  - Emulator detection via Build fingerprint heuristics
  *  - Debugger detection via Debug.isDebuggerConnected()
+ *  - Hooking framework detection (Xposed, EdXposed, LSPosed, Frida gadget/server)
  */
 class ShieldScanModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
@@ -28,13 +33,20 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun runSecurityChecks(promise: Promise) {
         try {
+            val isEmulatorDevice = isEmulator()
+
             val result = Arguments.createMap().apply {
                 putBoolean("rooted", isRooted())
                 putBoolean("fileBasedRoot", hasSuspiciousFiles())
                 putBoolean("fridaDetected", isFridaDetected())
-                putBoolean("emulator", isEmulator())
+                putBoolean("emulator", isEmulatorDevice)
                 putBoolean("debugger", Debug.isDebuggerConnected())
+
+                // Ignore hooking detection on emulator
+                val hooks = if (isEmulatorDevice) false else isHookingFrameworkPresent()
+                putBoolean("hooksDetected", hooks)
             }
+
             promise.resolve(result)
         } catch (e: Exception) {
             promise.reject("SHIELD_SCAN_ERROR", "Security check failed: ${e.message}", e)
@@ -141,5 +153,139 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
             || Build.PRODUCT.contains("sdk_gphone")
             || Build.HARDWARE.contains("goldfish")
             || Build.HARDWARE.contains("ranchu")
+    }
+
+    // ─── Hooking Framework Detection ─────────────────────────────────────────
+
+    /**
+     * Aggregated detection for common Android runtime hooking frameworks.
+     *
+     * Targets:
+     *  - Xposed / EdXposed / LSPosed managers
+     *  - Frida gadget / server
+     *  - SandHook / Epic / other hook libs
+     *  - Active Xposed/LSPosed via stack trace
+     *  - Hooking-related libraries in /proc/self/maps
+     *  - ADB + debuggable combination (hook-friendly environment)
+     */
+    private fun isHookingFrameworkPresent(): Boolean {
+        return hasXposedOrManagerInstalled() ||
+            hasLSPosedInstalled() ||
+            hasEdXposedInstalled() ||
+            isXposedActiveByStackTrace() ||
+            isHookingLibInProcMaps() ||
+            isAdbRootOrDebuggable()
+    }
+
+    /**
+     * Package-based detection for Xposed and related managers.
+     */
+    private fun hasXposedOrManagerInstalled(): Boolean {
+        val packages = listOf(
+            "de.robv.android.xposed.installer",   // classic Xposed
+            "com.solohsu.android.edxp.manager",   // EdXposed Manager
+            "org.meowcat.edxposed.manager"        // alt EdXposed
+        )
+        return packages.any { hasPackage(it) }
+    }
+
+    private fun hasLSPosedInstalled(): Boolean {
+        val packages = listOf(
+            "org.lsposed.manager",
+            "com.lsposed.manager"
+        )
+        return packages.any { hasPackage(it) }
+    }
+
+    private fun hasEdXposedInstalled(): Boolean {
+        val packages = listOf(
+            "com.solohsu.android.edxp.manager",
+            "org.meowcat.edxposed.manager"
+        )
+        return packages.any { hasPackage(it) }
+    }
+
+    private fun hasPackage(packageName: String): Boolean {
+        return try {
+            reactContext.packageManager.getPackageInfo(packageName, 0)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Detect Xposed/LSPosed by inspecting stack traces for known classes.
+     */
+    private fun isXposedActiveByStackTrace(): Boolean {
+        return try {
+            throw Exception("ShieldScan stack trace probe")
+        } catch (e: Exception) {
+            e.stackTrace.any { element ->
+                val cls = element.className
+                cls.contains("de.robv.android.xposed.XposedBridge") ||
+                    cls.contains("de.robv.android.xposed.XC_MethodHook") ||
+                    cls.contains("org.lsposed.lspd") ||
+                    cls.contains("com.lsposed") ||
+                    cls.contains("edxp")
+            }
+        }
+    }
+
+    /**
+     * Scan /proc/self/maps for known hooking libraries (Xposed, LSPosed, Frida, etc.).
+     */
+    private fun isHookingLibInProcMaps(): Boolean {
+        val indicators = listOf(
+            "xposed",       // generic Xposed
+            "lsposed",      // LSPosed
+            "edxp",         // EdXposed
+            "frida",        // Frida gadget/server
+            "substrate",    // Substrate-like libs on Android
+            "sandhook",     // SandHook
+            "epic"          // Epic hooking
+        )
+
+        return try {
+            val mapsFile = File("/proc/self/maps")
+            if (!mapsFile.exists() || !mapsFile.canRead()) return false
+
+            BufferedReader(FileReader(mapsFile)).use { reader ->
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    val l = line ?: continue
+                    if (indicators.any { indicator ->
+                            l.contains(indicator, ignoreCase = true)
+                        }
+                    ) {
+                        return true
+                    }
+                }
+            }
+            false
+        } catch (e: Exception) {
+            Log.w("ShieldScan", "Failed to read /proc/self/maps for hook detection", e)
+            false
+        }
+    }
+
+    /**
+     * Detects ADB-enabled + debuggable build combination,
+     * which is a high-risk, hook-friendly environment.
+     */
+    private fun isAdbRootOrDebuggable(): Boolean {
+        return try {
+            val adbEnabled = Settings.Secure.getInt(
+                reactContext.contentResolver,
+                Settings.Secure.ADB_ENABLED, 0
+            ) == 1
+
+            val isDebuggable = (reactContext.applicationInfo.flags and
+                android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+            adbEnabled && isDebuggable
+        } catch (_: Exception) {
+            false
+        }
     }
 }

@@ -34,6 +34,26 @@ export interface SecurityScanResult {
    * Uses Build.FINGERPRINT heuristics on Android, targetEnvironment on iOS.
    */
   emulator: boolean;
+
+    /**
+   * True if a runtime hooking framework is detected.
+   *
+   * Android:
+   *   - Xposed / EdXposed / LSPosed
+   *   - Frida gadget / Frida server
+   *   - SandHook / Epic
+   *   - Hook-related libraries found in /proc/self/maps
+   *
+   * iOS:
+   *   - MobileSubstrate / Cydia Substrate
+   *   - Substitute / SubstrateLoader
+   *   - LibHooker / TweakInject
+   *   - Any injected dylib detected via dyld image scanning
+   *
+   * Indicates that the app’s runtime may be modified or instrumented.
+   */
+  hooksDetected: boolean;
+
 }
 
 // ─── Error Helpers ─────────────────────────────────────────────────────────────
@@ -114,7 +134,8 @@ export async function isDeviceCompromised(): Promise<boolean> {
   return result.rooted
     || result.fileBasedRoot
     || result.fridaDetected
-    || result.debugger;
+    || result.debugger
+    || result.hooksDetected;
   // Note: emulator is intentionally excluded from this convenience check
   // as many teams allow emulator usage in dev/QA environments.
 }
