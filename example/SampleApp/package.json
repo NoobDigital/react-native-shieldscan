@@ -10,7 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@noobdigital/react-native-shieldscan": "^1.0.1",
+    "@noobdigital/react-native-shieldscan": "1.0.2",
     "@react-native/new-app-screen": "0.86.0",
     "react": "19.2.3",
     "react-native": "0.86.0",
