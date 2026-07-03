@@ -26,6 +26,7 @@ class ShieldScan: NSObject {
       "debugger":      isDebuggerAttached(),
       "emulator":      isSimulator(),
       "hooksDetected": isHookingFrameworkPresent(),
+      "developerMode": isDeveloperModeEnabled()
     ]
     resolve(result)
   }
@@ -58,6 +59,11 @@ class ShieldScan: NSObject {
       "/var/cache/apt",
       "/var/lib/apt",
       "/var/lib/cydia",
+      "/var/jb",
+      "/var/lib/jb",
+      "/private/preboot",
+      "/usr/libexec/substrate",
+      "/usr/libexec/substitute"
     ]
 
     for path in jailbreakPaths {
@@ -90,32 +96,60 @@ class ShieldScan: NSObject {
    *  - Look for known hooking-related substrings
    */
   private func isHookingFrameworkPresent() -> Bool {
-    #if targetEnvironment(simulator)
-    return false
-    #endif
-    let hookIndicators = [
-      "Substrate",
-      "MobileSubstrate",
-      "SubstrateLoader",
-      "Substitute",
-      "TweakInject",
-      "LibHooker",
-    ]
+      #if targetEnvironment(simulator)
+      return false
+      #endif
 
-    let imageCount = _dyld_image_count()
-    for i in 0..<imageCount {
-      if let cName = _dyld_get_image_name(i) {
-        let name = String(cString: cName)
-        for indicator in hookIndicators {
-          if name.localizedCaseInsensitiveContains(indicator) {
-            return true
+      let hookIndicators = [
+          // Cydia Substrate
+          "Substrate",
+          "MobileSubstrate",
+          "SubstrateLoader",
+
+          // Substitute
+          "Substitute",
+
+          // LibHooker
+          "LibHooker",
+
+          // Tweak injection
+          "TweakInject",
+
+          // Frida (dyld-injected)
+          "FridaGadget",
+          "frida-agent",
+          "frida-gadget"
+      ]
+
+      let imageCount = _dyld_image_count()
+      for i in 0..<imageCount {
+          if let cName = _dyld_get_image_name(i) {
+              let name = String(cString: cName)
+              if hookIndicators.contains(where: { name.localizedCaseInsensitiveContains($0) }) {
+                  return true
+              }
           }
-        }
       }
-    }
 
-    return false
+      // Additional check: Substrate/LibHooker tweak injection folder
+      let tweakPaths = [
+          "/Library/MobileSubstrate/DynamicLibraries",
+          "/usr/lib/TweakInject"
+      ]
+
+      for path in tweakPaths {
+          if FileManager.default.fileExists(atPath: path) {
+              return true
+          }
+      }
+
+      return false
   }
+
+  private func isDeveloperModeEnabled() -> Bool {
+      return ProcessInfo.processInfo.environment["DEVELOPER_MODE"] != nil
+  }
+
 
   // ─── File-Based Checks ────────────────────────────────────────────────────
 
@@ -130,9 +164,18 @@ class ShieldScan: NSObject {
   // ─── Frida Detection ─────────────────────────────────────────────────────
 
   private func isFridaDetected() -> Bool {
-    let fridaDylibs = ["frida-agent.dylib", "FridaGadget.dylib"]
-    for dylib in fridaDylibs {
-      if dlopen(dylib, RTLD_NOW) != nil { return true }
+    let fridaLibs = [
+        "frida-agent.dylib",
+        "frida-agent-64.dylib",
+        "frida-agent-32.dylib",
+        "FridaGadget.dylib",
+        "libfrida-gadget.dylib"
+    ]
+
+    for dylib in fridaLibs {
+        if dlopen(dylib, RTLD_NOW) != nil {
+            return true
+        }
     }
 
     if isFridaPortOpen(port: 27042) { return true }
@@ -140,7 +183,8 @@ class ShieldScan: NSObject {
     if ProcessInfo.processInfo.environment["FRIDA_DEBUG"] != nil { return true }
 
     return false
-  }
+}
+
 
   private func isFridaPortOpen(port: Int32) -> Bool {
     let sock = Darwin.socket(AF_INET, SOCK_STREAM, 0)
