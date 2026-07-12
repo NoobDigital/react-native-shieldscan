@@ -2,6 +2,7 @@ import Foundation
 import React
 import Darwin
 import MachO.dyld
+import UIKit 
 
 /**
  * ShieldScan - iOS Native Security Module
@@ -11,6 +12,28 @@ import MachO.dyld
  */
 @objc(ShieldScan)
 class ShieldScan: NSObject {
+
+  // ─── NEW: Screen security state ───────────────────────────────────────────
+  // Added for blur + screenshot prevention features.
+  // Declared here so init() can call setupLifecycleObservers().
+
+  private var isBlurEnabled: Bool = false
+  private var isScreenshotPreventionEnabled: Bool = false
+  private var blurView: UIView?
+  private var secureTextField: UITextField?
+  private var secureContainer: UIWindow?
+  private static let blurViewTag = 0x5A1E5C4A
+
+  // ─── NEW: Override init to wire lifecycle observers ───────────────────────
+
+  override init() {
+    super.init()
+    setupLifecycleObservers()
+  }
+
+  deinit {
+    NotificationCenter.default.removeObserver(self)
+  }
 
   // ─── Main Entry Point ─────────────────────────────────────────────────────
 
@@ -33,14 +56,6 @@ class ShieldScan: NSObject {
 
   // ─── Jailbreak Detection ──────────────────────────────────────────────────
 
-  /**
-   * IMPORTANT: Jailbreak checks are disabled on the iOS Simulator.
-   *
-   * Reason:
-   * The simulator environment contains many filesystem paths that also exist
-   * on jailbroken devices (e.g., /bin/bash, /usr/sbin/sshd, /etc/apt).
-   * These come from macOS, not from a jailbreak.
-   */
   private func isJailbroken() -> Bool {
     #if targetEnvironment(simulator)
     return false
@@ -70,7 +85,6 @@ class ShieldScan: NSObject {
       if FileManager.default.fileExists(atPath: path) { return true }
     }
 
-    // Write test: jailbroken apps can escape the sandbox
     let testPath = "/private/jailbreak_test_\(UUID().uuidString)"
     do {
       try "shieldscan_test".write(toFile: testPath, atomically: true, encoding: .utf8)
@@ -78,7 +92,6 @@ class ShieldScan: NSObject {
       return true
     } catch {}
 
-    // Symbolic link check
     if let _ = try? FileManager.default.destinationOfSymbolicLink(atPath: "/Applications") {
       return true
     }
@@ -88,34 +101,18 @@ class ShieldScan: NSObject {
 
   // ─── Hook Detection ───────────────────────────────────────────────────────
 
-  /**
-   * Detects presence of common iOS runtime hooking frameworks.
-   *
-   * Strategy:
-   *  - Scan loaded dynamic libraries via dyld
-   *  - Look for known hooking-related substrings
-   */
   private func isHookingFrameworkPresent() -> Bool {
       #if targetEnvironment(simulator)
       return false
       #endif
 
       let hookIndicators = [
-          // Cydia Substrate
           "Substrate",
           "MobileSubstrate",
           "SubstrateLoader",
-
-          // Substitute
           "Substitute",
-
-          // LibHooker
           "LibHooker",
-
-          // Tweak injection
           "TweakInject",
-
-          // Frida (dyld-injected)
           "FridaGadget",
           "frida-agent",
           "frida-gadget"
@@ -131,7 +128,6 @@ class ShieldScan: NSObject {
           }
       }
 
-      // Additional check: Substrate/LibHooker tweak injection folder
       let tweakPaths = [
           "/Library/MobileSubstrate/DynamicLibraries",
           "/usr/lib/TweakInject"
@@ -149,7 +145,6 @@ class ShieldScan: NSObject {
   private func isDeveloperModeEnabled() -> Bool {
       return ProcessInfo.processInfo.environment["DEVELOPER_MODE"] != nil
   }
-
 
   // ─── File-Based Checks ────────────────────────────────────────────────────
 
@@ -183,8 +178,7 @@ class ShieldScan: NSObject {
     if ProcessInfo.processInfo.environment["FRIDA_DEBUG"] != nil { return true }
 
     return false
-}
-
+  }
 
   private func isFridaPortOpen(port: Int32) -> Bool {
     let sock = Darwin.socket(AF_INET, SOCK_STREAM, 0)
@@ -225,4 +219,190 @@ class ShieldScan: NSObject {
     return false
     #endif
   }
+// ─── Background Blur ──────────────────────────────────────────────────────
+
+@objc
+func setBlurEnabled(
+  _ enabled: Bool,
+  resolver resolve: RCTPromiseResolveBlock,
+  rejecter reject: RCTPromiseRejectBlock
+) {
+  isBlurEnabled = enabled
+  if !enabled {
+    removeBlurOverlay()
+  }
+  resolve(["blurEnabled": enabled])
+}
+
+// ─── Screenshot & Recording Prevention ───────────────────────────────────
+
+@objc
+func setScreenshotPreventionEnabled(
+  _ enabled: Bool,
+  resolver resolve: @escaping RCTPromiseResolveBlock,
+  rejecter reject: @escaping RCTPromiseRejectBlock
+) {
+  DispatchQueue.main.async { [weak self] in
+    guard let self = self else { return }
+    self.isScreenshotPreventionEnabled = enabled
+    if enabled {
+      self.enableScreenshotPrevention()
+    } else {
+      self.disableScreenshotPrevention()
+    }
+    resolve(["screenshotPreventionEnabled": enabled])
+  }
+}
+
+@objc
+func isScreenBeingRecorded(
+  _ resolve: @escaping RCTPromiseResolveBlock,
+  rejecter reject: @escaping RCTPromiseRejectBlock
+) {
+  DispatchQueue.main.async {
+    resolve(["isRecording": UIScreen.main.isCaptured])
+  }
+}
+
+// ─── Screenshot prevention implementation ────────────────────────────────
+
+private func enableScreenshotPrevention() {
+  guard secureContainer == nil else { return }
+  guard let appWindow = getAppWindow() else { return }
+
+  let field = UITextField()
+  field.isSecureTextEntry = true
+  field.translatesAutoresizingMaskIntoConstraints = false
+
+  let window: UIWindow
+  if #available(iOS 13.0, *) {
+    guard let scene = appWindow.windowScene else { return }
+    window = UIWindow(windowScene: scene)
+  } else {
+    window = UIWindow(frame: appWindow.bounds)
+  }
+
+  window.frame = appWindow.bounds
+  window.windowLevel = .alert + 1
+  window.backgroundColor = .clear
+  window.isUserInteractionEnabled = false
+
+  let vc = UIViewController()
+  vc.view.backgroundColor = .clear
+  vc.view.addSubview(field)
+
+  NSLayoutConstraint.activate([
+    field.topAnchor.constraint(equalTo: vc.view.topAnchor),
+    field.bottomAnchor.constraint(equalTo: vc.view.bottomAnchor),
+    field.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor),
+    field.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor),
+  ])
+
+  window.rootViewController = vc
+  window.isHidden = false
+  window.layoutIfNeeded()
+
+  secureTextField = field
+  secureContainer = window
+}
+
+private func disableScreenshotPrevention() {
+  secureContainer?.isHidden = true
+  secureContainer?.rootViewController = nil
+  secureContainer = nil
+  secureTextField = nil
+}
+
+// ─── Blur implementation (UPDATED) ────────────────────────────────────────
+
+@objc private func appWillResignActive() {
+  guard isBlurEnabled else { return }
+  addBlurOverlay()
+}
+
+@objc private func appDidBecomeActive() {
+  removeBlurOverlay()
+}
+
+private func addBlurOverlay() {
+    DispatchQueue.main.async { [weak self] in
+        guard let self = self, let window = self.getAppWindow() else { return }
+
+        // Remove existing overlay
+        window.viewWithTag(ShieldScan.blurViewTag)?.removeFromSuperview()
+
+        // Fullscreen overlay
+        let overlay = UIView(frame: window.bounds)
+        overlay.backgroundColor = UIColor.systemBackground
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.tag = ShieldScan.blurViewTag
+
+        // Label
+        let label = UILabel()
+        label.text = "We’re protecting your sensitive content."
+        label.textAlignment = .center
+        label.font = UIFont.systemFont(ofSize: 17, weight: .medium)
+        label.textColor = UIColor.label
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        overlay.addSubview(label)
+
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: overlay.centerYAnchor)
+        ])
+
+        window.addSubview(overlay)
+        self.blurView = overlay
+    }
+}
+
+private func removeBlurOverlay() {
+  DispatchQueue.main.async { [weak self] in
+    guard let self = self, let window = self.getAppWindow() else { return }
+    window.viewWithTag(ShieldScan.blurViewTag)?.removeFromSuperview()
+    self.blurView = nil
+  }
+}
+
+// ─── Window helper (UPDATED) ──────────────────────────────────────────────
+
+private func getAppWindow() -> UIWindow? {
+  if #available(iOS 13.0, *) {
+    let windows = UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap { $0.windows }
+
+    // Exclude secure container + hidden windows
+    let filtered = windows.filter { window in
+      window !== secureContainer &&
+      !window.isHidden &&
+      window.alpha > 0.01
+    }
+
+    // Prefer normal-level windows, fallback to any visible window
+    return filtered.first(where: { $0.windowLevel == .normal })
+        ?? filtered.first
+  } else {
+    return UIApplication.shared.keyWindow
+  }
+}
+
+// ─── Lifecycle observers (UPDATED) ─────────────────────────────────────────
+
+private func setupLifecycleObservers() {
+  NotificationCenter.default.addObserver(
+    self,
+    selector: #selector(appWillResignActive),
+    name: UIApplication.willResignActiveNotification,
+    object: nil
+  )
+
+  NotificationCenter.default.addObserver(
+    self,
+    selector: #selector(appDidBecomeActive),
+    name: UIApplication.didBecomeActiveNotification,
+    object: nil
+  )
+}
 }

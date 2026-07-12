@@ -1,5 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <!-- react-native-shieldscan does not declare any permissions.
-       Socket connections to 127.0.0.1 for Frida port detection
+  <!-- Socket connections to 127.0.0.1 for Frida port detection
        do not require INTERNET permission on Android. -->
+
+  <!-- Required for isScreenBeingRecorded() on Android 15+ (API 35).
+       Normal/install-time permission — no runtime prompt needed. -->
+  <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
 </manifest>

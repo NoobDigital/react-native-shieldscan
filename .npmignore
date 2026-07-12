@@ -1,26 +1,15 @@
-# Development artifacts
-__tests__/
+# Ignore example app
 example/
 .github/
 coverage/
 node_modules/
+example/**
 
-# Build intermediates
-android/build/
-android/.cxx/
-android/.gradle/
+# Ignore iOS build artifacts
+ios/Pods/
 ios/build/
+ios/DerivedData/
 
-# Config files not needed at runtime
-.eslintrc.js
-.eslintignore
-tsconfig*.json
-babel.config.js
-jest.config.js
+# Misc
 *.log
-
-# Editor / OS
-.vscode/
-.idea/
 .DS_Store
-Thumbs.db

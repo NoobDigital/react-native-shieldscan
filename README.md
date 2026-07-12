@@ -6,13 +6,15 @@
 [![platform](https://img.shields.io/badge/platform-ios%20%7C%20android-lightgrey.svg)](https://www.npmjs.com/package/@noobdigital/react-native-shieldscan)
 [![architecture](https://img.shields.io/badge/new%20arch-supported-brightgreen.svg)](https://reactnative.dev/docs/the-new-architecture/landing-page)
 
-Runtime security detection for React Native apps. Detects jailbreak, root, Frida instrumentation, debugger attachment, emulator environments, runtime hooking frameworks, and developer mode — in a single native call.
+ **Runtime security detection** and **screen security** for React Native apps. Detects jailbreak, root, Frida instrumentation, debugger attachment, emulator environments, runtime hooking frameworks, and developer mode — plus background blur, screenshot/recording prevention, and screen recording detection — in a single native module.
 
 Supports **Old Architecture** (Bridge) and **New Architecture** (Turbo Modules / JSI). React Native 0.70+.
 
 ---
 
 ## Features
+
+### Runtime Security Detection
 
 | Check | iOS | Android |
 |---|---|---|
@@ -23,6 +25,16 @@ Supports **Old Architecture** (Bridge) and **New Architecture** (Turbo Modules /
 | Emulator / Simulator | ✅ `targetEnvironment(simulator)` | ✅ Build fingerprint + sensor count heuristic (covers Bluestacks, Nox, LDPlayer, Genymotion, MEmu) |
 | Hooking frameworks | ✅ dyld image scan (Substrate, Substitute, LibHooker) | ✅ Package scan + stack trace probe + `/proc/self/maps` (Xposed, LSPosed, Frida gadget, SandHook) |
 | Developer mode | ✅ Always `false` (no public iOS API) | ✅ `Settings.Secure.DEVELOPMENT_SETTINGS_ENABLED` |
+
+### Screen Security (v1.1.0+)
+
+| Feature | iOS | Android |
+|---|---|---|
+| Background blur | ✅ Overlay shown on `willResignActive`, removed on `didBecomeActive` | ✅ Overlay shown on window focus loss (app switcher / Home), removed on regain |
+| Screenshot / recording prevention | ✅ Secure `UITextField` layer trick — blank in captures, visible on-device | ✅ `WindowManager.LayoutParams.FLAG_SECURE` — blank in captures **and** in the recents card |
+| Screen recording detection | ✅ `UIScreen.main.isCaptured`, any iOS version | ⚠️ Android 15 (API 35)+ only, via `WindowManager.addScreenRecordingCallback`. Resolves `false` on older OS versions — there is no public API pre-15 |
+
+> **Platform trade-off to know before you ship:** on Android, enabling Screenshot Prevention makes the recents/app-switcher card render fully blank — your Background Blur message **cannot** appear at the same time, because `FLAG_SECURE` blocks the OS from rendering *any* content (including your own overlay) into that snapshot. This is an Android platform restriction, not a bug. iOS has no equivalent conflict — both features work independently there. See [Security Notes](#security-notes) below.
 
 ---
 
@@ -69,6 +81,8 @@ import com.shieldscan.ShieldScanPackage
 // inside getPackages():
 packages.add(ShieldScanPackage())
 ```
+
+**Permissions:** the library's own manifest declares `android.permission.DETECT_SCREEN_RECORDING` (a normal, install-time permission — not a runtime prompt, not on Google Play's sensitive-permissions list). Gradle's manifest merger folds this into your app automatically; no action needed in your app's `AndroidManifest.xml`. This permission only enables `isScreenBeingRecorded()` on Android 15+ and has no effect on distribution, review, or user-facing prompts.
 
 ---
 
@@ -168,6 +182,52 @@ async function enforceDeviceSecurity() {
 }
 ```
 
+### Screen Security — background blur (v1.1.0+)
+
+Shows a cover screen with a protective message whenever the app is backgrounded or the app switcher is opened, hiding sensitive content from the recents thumbnail.
+
+```typescript
+import { setBlurEnabled } from '@noobdigital/react-native-shieldscan';
+
+// Enable on a sensitive screen
+await setBlurEnabled(true);
+
+// Disable when leaving that screen
+await setBlurEnabled(false);
+```
+
+> Enabling this just arms the feature — the overlay itself only appears once the app actually loses focus (Home pressed, app switcher opened, etc.), not immediately on the call.
+
+### Screen Security — screenshot & recording prevention (v1.1.0+)
+
+Blocks the content of the current screen from appearing in screenshots and screen recordings.
+
+```typescript
+import { setScreenshotPreventionEnabled } from '@noobdigital/react-native-shieldscan';
+
+// Enable on a payment / card details screen
+await setScreenshotPreventionEnabled(true);
+
+// Disable when leaving that screen
+await setScreenshotPreventionEnabled(false);
+```
+
+> On Android this also blanks the recents/app-switcher card — see the [platform trade-off note](#features) above if you're also using Background Blur.
+
+### Screen Security — detecting an active screen recording (v1.1.0+)
+
+```typescript
+import { isScreenBeingRecorded } from '@noobdigital/react-native-shieldscan';
+
+const { isRecording } = await isScreenBeingRecorded();
+
+if (isRecording) {
+  // e.g. warn the user, or hide a sensitive value in JS as an extra layer
+}
+```
+
+> Poll-on-demand only — call it when you need the current state (e.g. before revealing a sensitive value), rather than in a tight loop. On Android this requires API 35+ and resolves `false` on older versions, since there is no public detection API pre-Android 15. On iOS it works via `UIScreen.main.isCaptured` on any supported iOS version.
+
 ---
 
 ## API Reference
@@ -197,6 +257,20 @@ Signal weights:
 | `debugger` | 10 pts | Suspicious in production |
 | `developerMode` | 5 pts | Elevated attack surface |
 | `emulator` | 0 pts | Informational only |
+
+### `setBlurEnabled(enabled: boolean): Promise<boolean>`
+
+Arms or disarms the background blur cover screen. Resolves with the value passed in. See [usage example](#screen-security--background-blur-v110) above.
+
+### `setScreenshotPreventionEnabled(enabled: boolean): Promise<boolean>`
+
+Enables or disables screenshot/recording blocking for the current screen. Resolves with the value passed in. See [usage example](#screen-security--screenshot--recording-prevention-v110) above.
+
+> **Android threading note:** both of these are safe to call from any JS context/thread on the RN side — the native module internally dispatches all view/window mutations to the UI thread. You do not need to guard calls yourself.
+
+### `isScreenBeingRecorded(): Promise<{ isRecording: boolean }>`
+
+Returns whether the screen is currently being captured by a recording/casting session at the moment of the call. See [usage example](#screen-security--detecting-an-active-screen-recording-v110) above.
 
 ### `SecurityScanResult`
 
@@ -277,7 +351,7 @@ interface CompromisedResult {
 
 A working example app is included in the repository under `example/SampleApp/`.
 
-It demonstrates all seven security checks with a live result screen including risk score card, threat level indicator, and per-check severity badges:
+It demonstrates all seven security checks with a live result screen including risk score card, threat level indicator, and per-check severity badges — plus a Screen Security panel to toggle background blur and screenshot prevention live, and a screen recording status indicator.
 
 ```
 example/
@@ -322,6 +396,8 @@ Module resolved via `TurboModuleRegistry.get('ShieldScan')` through JSI. The Typ
 
 The package detects which architecture is active at runtime and selects the appropriate resolution path automatically.
 
+> **Android TurboModule threading:** under the New Architecture, `@ReactMethod` calls run on the native-modules thread, not the UI thread. `setBlurEnabled` and `setScreenshotPreventionEnabled` account for this internally (via `runOnUiThread`) so they're safe to call regardless of architecture — this is handled for you, not something consumers need to work around.
+
 ---
 
 ## Security Notes
@@ -347,6 +423,15 @@ Android root detection uses RootBeer `0.1.2`, which includes 16 KB ELF page size
 **Simulator guards on iOS**
 Jailbreak and hook detection checks are disabled at compile time on the iOS Simulator via `#if targetEnvironment(simulator)`. This prevents false positives from macOS filesystem paths (e.g. `/bin/bash`) that exist on the simulator host but are not jailbreak indicators.
 
+**Android: Screenshot Prevention blanks Background Blur in recents**
+`FLAG_SECURE` operates at the OS compositor level — it instructs Android to never render the window's content into *any* snapshot (recents card, screenshots, screen recordings, casting), regardless of what views are in the hierarchy. If both `setBlurEnabled(true)` and `setScreenshotPreventionEnabled(true)` are active, the recents card will show a blank/white card, not your blur message — the OS discards the entire frame before any snapshot consumer sees it. This is expected, by-design Android behavior, not a bug, and there is no workaround at the app level. If both your message and hard capture-blocking matter, consider gating the UI so users understand only one visual outcome is possible on Android at a time; iOS has no equivalent conflict since its two features use independent mechanisms.
+
+**Android: screen recording detection requires API 35+**
+`isScreenBeingRecorded()` uses `WindowManager.addScreenRecordingCallback`, introduced in Android 15 (API 35), and requires the `DETECT_SCREEN_RECORDING` manifest permission (declared automatically by this library). On devices below API 35, it resolves `false` — there is no public, reliable screen-recording-detection API on earlier Android versions. It also only detects `MediaProjection`-based recorders (Android's built-in recorder and most third-party apps); tools like `scrcpy` or the low-level `screenrecord` binary are not identified as recording sessions by this Android API.
+
+**Android: manifest permission is a library-level declaration**
+`DETECT_SCREEN_RECORDING` is a normal, install-time permission — it does not trigger a Google Play sensitive-permissions declaration form, extended review, or a runtime user prompt. It's merged into consuming apps automatically via Gradle's manifest merger; no action is required in your app's manifest or Play Console listing.
+
 ---
 
 ## VAPT Compliance
@@ -361,6 +446,8 @@ Developed and validated against OWASP Mobile Top 10:
 | Hooking frameworks (Xposed, Substrate) not detected | M10 | `hooksDetected` |
 | App runs on emulator without restriction | M8 | `emulator` |
 | Developer options not detected | M8 | `developerMode` |
+| Sensitive content exposed in app switcher / recents | M9 | `setBlurEnabled` |
+| Sensitive content captured via screenshot or screen recording | M9 | `setScreenshotPreventionEnabled`, `isScreenBeingRecorded` |
 
 ---
 

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+
+
+## [1.0.3] - 2026-07-13
+
+### Added
+- Screen Security (v1.1.0+)
+  - Background blur  
+    - iOS: overlay shown on `willResignActive`, removed on `didBecomeActive`  
+    - Android: overlay shown on window focus loss (Home / App Switcher), removed on regain
+  - Screenshot / screen‑recording prevention  
+    - iOS: secure rendering via `UITextField` secure layer trick — blank in screenshots and recordings  
+    - Android: `WindowManager.LayoutParams.FLAG_SECURE` — blocks screenshots and recents preview
+  - Screen recording detection  
+    - iOS: `UIScreen.main.isCaptured` (all OS versions)  
+    - Android: supported only on Android 15 (API 35+) via `WindowManager.addScreenRecordingCallback`
+
+### Notes
+- Android platform limitation:  
+  When `FLAG_SECURE` is enabled, Android blanks the entire recents/app‑switcher snapshot.  
+  This is a system‑level restriction — the blur overlay **cannot** appear simultaneously because the OS refuses to render any content (including overlays) into the snapshot.  
+  iOS does not have this conflict; both blur and screenshot prevention can operate independently.
+
+
 ## [1.0.2] - 2026-07-03
 
 ### Added
