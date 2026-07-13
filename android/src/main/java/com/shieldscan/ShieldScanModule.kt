@@ -13,7 +13,6 @@ import android.view.Window
 import android.view.WindowManager
 import com.facebook.react.bridge.*
 import com.facebook.react.bridge.LifecycleEventListener
-import com.facebook.react.turbomodule.core.interfaces.TurboModule
 import com.scottyab.rootbeer.RootBeer
 import java.io.BufferedReader
 import java.io.File
@@ -27,8 +26,7 @@ import android.view.Gravity
 class ShieldScanModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext),
     LifecycleEventListener,
-    ActivityEventListener,
-    TurboModule {
+    ActivityEventListener {  
 
     private var lastActivity: Activity? = null
     private var blurEnabled: Boolean = false
@@ -49,17 +47,8 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
 
     override fun getName(): String = "ShieldScan"
 
-    // ─── ActivityEventListener (required overrides) ────────────────────
-
-    override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
-        // no-op, required by interface
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        // no-op, required by interface
-    }
-
-    // ─── Window.Callback wrapper (blur-in-recents fix) ─────────────────
+    override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {}
+    override fun onNewIntent(intent: Intent) {}
 
     private inner class WindowCallbackWrapper(private val base: Window.Callback) : Window.Callback by base {
         override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -95,8 +84,6 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
         }
         wrappedCallback = null
     }
-
-    // ─── Screen recording detection (Android 15 / API 35+ only) ──────────
 
     private fun registerScreenRecordingDetection(activity: Activity) {
         if (Build.VERSION.SDK_INT < 35) return
@@ -151,8 +138,6 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
         promise.resolve(isCurrentlyRecording)
     }
 
-    // ─── Lifecycle fixes ───────────────────────────────────────────────
-
     override fun onHostPause() {
         if (blurEnabled) lastActivity?.let { applyBlurOverlay(it) }
     }
@@ -177,13 +162,6 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
         }
         lastActivity = null
     }
-
-    // ─── Screen Security API ───────────────────────────────────────────
-    // NOTE: these are @ReactMethod entry points. Under the New Architecture
-    // (TurboModules), these run on the native-modules thread (mqt_v_native),
-    // NOT the UI thread — so any view/window touching here MUST be
-    // dispatched via activity.runOnUiThread, or Android throws
-    // CalledFromWrongThreadException, exactly as seen in the logs.
 
     @ReactMethod
     fun setBlurEnabled(enabled: Boolean, promise: Promise) {
@@ -262,7 +240,6 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
         blurView = null
     }
 
-    // ─── Security Checks (unchanged) ─────────────────────────────────────
     @ReactMethod
     fun runSecurityChecks(promise: Promise) {
         try {

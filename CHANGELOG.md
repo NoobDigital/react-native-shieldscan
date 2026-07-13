@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-07-13
+
+### Added
+- Screen Security
+  - Background blur  
+    - iOS: overlay shown on `willResignActive`, removed on `didBecomeActive`  
+    - Android: overlay shown on window focus loss (Home / App Switcher), removed on regain
+  - Screenshot / screen‑recording prevention  
+    - iOS: secure rendering via `UITextField` secure layer trick — blank in screenshots and recordings  
+    - Android: `WindowManager.LayoutParams.FLAG_SECURE` — blocks screenshots and recents preview
+  - Screen recording detection  
+    - iOS: `UIScreen.main.isCaptured` (all OS versions)  
+    - Android: supported only on Android 15 (API 35+) via `WindowManager.addScreenRecordingCallback`
+- Architecture Cleanup & Stability Fixes    
+  - Removed all TurboModule / JSI integration
+  - Removed all codegen-related files and configuration
+  - Cleaned Android build to remove stale codegen outputs
+  - Fixed “No such module 'React'” error
+
 
 
 ## [1.0.3] - 2026-07-13
@@ -42,7 +61,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sensor count heuristic for emulator detection (real devices ≥ 15 sensors, emulators < 5)
 - Emulator coverage expanded: Bluestacks, Nox, LDPlayer, MEmu, Andy, Droid4X, Genymotion/VirtualBox
 - Zygisk path added to suspicious file list (`/data/adb/modules/.zygisk`)
-- `codegenConfig` block added to `react-native.config.js`
 - `s.swift_version = "5.0"` added to podspec
 
 ### Changed

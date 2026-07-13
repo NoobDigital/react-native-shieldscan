@@ -16,13 +16,10 @@ Pod::Spec.new do |s|
     :tag => "#{s.version}"
   }
 
-  # Include both Swift implementation and Obj-C bridge
   s.source_files = "ios/**/*.{h,m,mm,swift}"
 
-  # React Native New Architecture support.
-  # install_modules_dependencies handles:
-  #   - Linking React-Core for Old Arch
-  #   - Linking ReactCommon/turbomodule/core for New Arch
-  #   - Setting the REACT_NATIVE_TARGET_VERSION for codegen
-  install_modules_dependencies(s)
+  # ✔ Correct dependencies for RN 0.73 NativeModule
+  s.dependency 'React-Core'
+  s.dependency 'React-CoreModules'
+  s.dependency 'React'
 end

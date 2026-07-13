@@ -6,7 +6,7 @@
 [![platform](https://img.shields.io/badge/platform-ios%20%7C%20android-lightgrey.svg)](https://www.npmjs.com/package/@noobdigital/react-native-shieldscan)
 [![architecture](https://img.shields.io/badge/new%20arch-supported-brightgreen.svg)](https://reactnative.dev/docs/the-new-architecture/landing-page)
 
- **Runtime security detection** and **screen security** for React Native apps. Detects jailbreak, root, Frida instrumentation, debugger attachment, emulator environments, runtime hooking frameworks, and developer mode — plus background blur, screenshot/recording prevention, and screen recording detection — in a single native module.
+Runtime security detection **and screen security** for React Native apps. Detects jailbreak, root, Frida instrumentation, debugger attachment, emulator environments, runtime hooking frameworks, and developer mode — plus background blur, screenshot/recording prevention, and screen recording detection — in a single native module.
 
 Supports **Old Architecture** (Bridge) and **New Architecture** (Turbo Modules / JSI). React Native 0.70+.
 
@@ -26,7 +26,7 @@ Supports **Old Architecture** (Bridge) and **New Architecture** (Turbo Modules /
 | Hooking frameworks | ✅ dyld image scan (Substrate, Substitute, LibHooker) | ✅ Package scan + stack trace probe + `/proc/self/maps` (Xposed, LSPosed, Frida gadget, SandHook) |
 | Developer mode | ✅ Always `false` (no public iOS API) | ✅ `Settings.Secure.DEVELOPMENT_SETTINGS_ENABLED` |
 
-### Screen Security (v1.1.0+)
+### Screen Security
 
 | Feature | iOS | Android |
 |---|---|---|
@@ -119,7 +119,7 @@ if (compromised) {
 }
 ```
 
-### Enterprise — risk scoring engine (v1.0.2+)
+### Enterprise — risk scoring engine 
 
 ```typescript
 import { getDeviceRiskAssessment } from '@noobdigital/react-native-shieldscan';
@@ -182,7 +182,7 @@ async function enforceDeviceSecurity() {
 }
 ```
 
-### Screen Security — background blur (v1.1.0+)
+### Screen Security — background blur 
 
 Shows a cover screen with a protective message whenever the app is backgrounded or the app switcher is opened, hiding sensitive content from the recents thumbnail.
 
@@ -198,7 +198,7 @@ await setBlurEnabled(false);
 
 > Enabling this just arms the feature — the overlay itself only appears once the app actually loses focus (Home pressed, app switcher opened, etc.), not immediately on the call.
 
-### Screen Security — screenshot & recording prevention (v1.1.0+)
+### Screen Security — screenshot & recording prevention 
 
 Blocks the content of the current screen from appearing in screenshots and screen recordings.
 
@@ -214,7 +214,7 @@ await setScreenshotPreventionEnabled(false);
 
 > On Android this also blanks the recents/app-switcher card — see the [platform trade-off note](#features) above if you're also using Background Blur.
 
-### Screen Security — detecting an active screen recording (v1.1.0+)
+### Screen Security — detecting an active screen recording
 
 ```typescript
 import { isScreenBeingRecorded } from '@noobdigital/react-native-shieldscan';

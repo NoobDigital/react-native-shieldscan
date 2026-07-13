@@ -17,10 +17,4 @@ module.exports = {
       },
     },
   },
-  codegenConfig: {
-  name: 'ShieldScan',
-  type: 'modules',
-  jsSrcsDir: './src',
-  files: ['NativeShieldScanSpec.ts'],
-}
 };
