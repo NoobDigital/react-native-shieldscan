@@ -1361,10 +1361,10 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@noobdigital/react-native-shieldscan@1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@noobdigital/react-native-shieldscan/-/react-native-shieldscan-1.1.0.tgz#9a176a9e82e688e9fae2e453e2f777112381cd17"
-  integrity sha512-i9pM11IJwP0I9uXO4j6WzOsuhWWkXRCW32uwkhAT5YJhVIsTh6Pw+L2puKKE0V73x8HqGpLA/bJGlrHOnpit6A==
+"@noobdigital/react-native-shieldscan@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@noobdigital/react-native-shieldscan/-/react-native-shieldscan-1.1.1.tgz#b8ca03f1bf63c39812da5edc7b65d5b15ad78f65"
+  integrity sha512-cZCO3DkQ3jknweoIrkYBSN/4ejNP0XA3VvknDnOePtxGeBvmFUjEAl5OxX8Wr2PnhpCUkLnHzzS+nBVNM1+zHw==
 
 "@react-native-community/cli-clean@20.1.0":
   version "20.1.0"
