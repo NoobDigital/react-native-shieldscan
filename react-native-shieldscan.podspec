@@ -17,9 +17,8 @@ Pod::Spec.new do |s|
   }
 
   s.source_files = "ios/**/*.{h,m,mm,swift}"
+  s.swift_version = "5.0"
 
-  # ✔ Correct dependencies for RN 0.73 NativeModule
   s.dependency 'React-Core'
-  s.dependency 'React-CoreModules'
   s.dependency 'React'
 end

@@ -469,7 +469,7 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
         )
         return scanProcMaps(artifacts)
     }
-
+    @Suppress("DEPRECATION")
     private fun isDeveloperOptionsEnabled(): Boolean {
         val devOptions = try {
             Settings.Secure.getInt(
