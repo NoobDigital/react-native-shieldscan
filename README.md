@@ -15,15 +15,15 @@
 
 ## Overview
 
-**Noob Digital ShieldScan** is a native security module for React Native that detects compromised runtime environments —
-jailbreak, root, Frida instrumentation, hooking frameworks, and attached debuggers — and provides screen-level
-privacy controls to protect sensitive content from screenshots, screen recording, and the app switcher.
 
-Built for production apps handling payments, credentials, or PII, where knowing the integrity of the device
-matters as much as securing the network layer. Ships as a single native module for both platforms, with a
-weighted risk-scoring engine for tiered enforcement rather than a single pass/fail flag.
+**Noob Digital ShieldScan**  is a React Native Runtime Security and Screen Privacy SDK that helps identify compromised devices, active runtime attacks, and data exposure risks before they impact your application.
 
-Supports Old Architecture (Bridge) and New Architecture (Turbo Modules / JSI). React Native 0.71+.
+ShieldScan detects jailbreaks, root access, Frida instrumentation, hooking frameworks, attached debuggers, emulators, and insecure device configurations, while providing native screen privacy controls to prevent screenshots, screen recordings, and sensitive data exposure through the app switcher.
+
+Designed for enterprise, fintech, healthcare, government, and identity-based applications, ShieldScan combines security signals into a weighted risk-scoring engine that enables tiered enforcement strategies ranging from monitoring and telemetry to feature restriction and session termination.
+
+Delivered as a single native module for iOS and Android, ShieldScan supports both React Native New Architecture (TurboModules/JSI) and the legacy Bridge architecture.
+
 
 > **Always install the latest published version.** Detection logic, indicator lists, and platform compatibility
 > are actively maintained — running an older version means missing accuracy fixes and OS-compatibility updates.
