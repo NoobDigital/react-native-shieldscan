@@ -76,7 +76,6 @@ class ShieldScan: NSObject {
       "/var/lib/cydia",
       "/var/jb",
       "/var/lib/jb",
-      "/private/preboot",
       "/usr/libexec/substrate",
       "/usr/libexec/substitute"
     ]
@@ -85,63 +84,77 @@ class ShieldScan: NSObject {
       if FileManager.default.fileExists(atPath: path) { return true }
     }
 
-    let testPath = "/private/jailbreak_test_\(UUID().uuidString)"
-    do {
-      try "shieldscan_test".write(toFile: testPath, atomically: true, encoding: .utf8)
-      try? FileManager.default.removeItem(atPath: testPath)
-      return true
-    } catch {}
-
-    if let _ = try? FileManager.default.destinationOfSymbolicLink(atPath: "/Applications") {
-      return true
-    }
-
     return false
-  }
+}
 
   // ─── Hook Detection ───────────────────────────────────────────────────────
 
   private func isHookingFrameworkPresent() -> Bool {
-      #if targetEnvironment(simulator)
-      return false
-      #endif
+    #if targetEnvironment(simulator)
+    return false
+    #endif
 
-      let hookIndicators = [
-          "Substrate",
-          "MobileSubstrate",
-          "SubstrateLoader",
-          "Substitute",
-          "LibHooker",
-          "TweakInject",
-          "FridaGadget",
-          "frida-agent",
-          "frida-gadget"
-      ]
+    let hookIndicators = [
+        // Substrate ecosystem — jailbreak-specific, no legit SDK collision
+        "MobileSubstrate",
+        "SubstrateLoader",
+        "SubstrateBootstrap",
+        "SubstrateInserter",
+        "CydiaSubstrate",
+        "RocketBootstrap",
+        "PreferenceLoader",
 
-      let imageCount = _dyld_image_count()
-      for i in 0..<imageCount {
-          if let cName = _dyld_get_image_name(i) {
-              let name = String(cString: cName)
-              if hookIndicators.contains(where: { name.localizedCaseInsensitiveContains($0) }) {
+        // Frida — specific tool/binary names
+        "FridaGadget",
+        "frida-agent",
+        "frida-gadget",
+
+        // Hooking libraries — specific, technical names
+        "LibHooker",
+        "TweakInject",
+        "cynject",
+        "cyinject",
+        "libcycript",
+
+        // Jailbreak-specific tweaks/tools — distinctive names, no real-world overlap
+        "Cephei",
+        "ABypass",
+        "AppSyncUnified-FrontBoard",
+        "FlyJB",
+        "0Shadow",
+        "SSLKillSwitch",
+        "SSLKillSwitch2",
+        "WeeLoader",
+        "systemhook",       // Dopamine anti-detection bypass
+        "libsparkapplist",
+        "zzzzLiberty",
+        "zzzzzzUnSub",
+        "CustomWidgetIcons"
+    ]
+
+    let imageCount = _dyld_image_count()
+    for i in 0..<imageCount {
+        if let cName = _dyld_get_image_name(i) {
+             let name = String(cString: cName).lowercased()
+              if hookIndicators.contains(where: { name.contains($0) }) {
                   return true
               }
-          }
-      }
+        }
+    }
 
-      let tweakPaths = [
-          "/Library/MobileSubstrate/DynamicLibraries",
-          "/usr/lib/TweakInject"
-      ]
+    let tweakPaths = [
+        "/Library/MobileSubstrate/DynamicLibraries",
+        "/usr/lib/TweakInject"
+    ]
 
-      for path in tweakPaths {
-          if FileManager.default.fileExists(atPath: path) {
-              return true
-          }
-      }
+    for path in tweakPaths {
+        if FileManager.default.fileExists(atPath: path) {
+            return true
+        }
+    }
 
-      return false
+    return false
   }
-
   private func isDeveloperModeEnabled() -> Bool {
       return ProcessInfo.processInfo.environment["DEVELOPER_MODE"] != nil
   }

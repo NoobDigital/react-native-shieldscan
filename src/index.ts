@@ -79,7 +79,7 @@ export async function getDeviceRiskAssessment(): Promise<CompromisedResult> {
   const threatLevel = getThreatLevel(finalScore);
 
   return {
-    compromised: finalScore >= 30,
+    compromised: finalScore >= 40,
     threatLevel,
     score: finalScore,
     signals,

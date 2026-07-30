@@ -34,6 +34,7 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
     private var blurView: View? = null
 
     private var wrappedCallback: WindowCallbackWrapper? = null
+    private var originalCallback: Window.Callback? = null
 
     private var screenRecordingCallback: Consumer<Int>? = null
     private var isCurrentlyRecording: Boolean = false
@@ -62,27 +63,25 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
-    private fun attachWindowCallback(activity: Activity) {
+   private fun attachWindowCallback(activity: Activity) {
         val window = activity.window ?: return
         val current = window.callback
         if (current !is WindowCallbackWrapper) {
+            originalCallback = current
             val wrapper = WindowCallbackWrapper(current)
             window.callback = wrapper
             wrappedCallback = wrapper
         }
         registerScreenRecordingDetection(activity)
     }
-
     private fun detachWindowCallback(activity: Activity) {
         unregisterScreenRecordingDetection(activity)
         val window = activity.window ?: return
-        val current = window.callback
-        if (current is WindowCallbackWrapper) {
-            val baseField = current.javaClass.getDeclaredField("base")
-            baseField.isAccessible = true
-            window.callback = baseField.get(current) as Window.Callback
+        if (window.callback is WindowCallbackWrapper) {
+            originalCallback?.let { window.callback = it }
         }
         wrappedCallback = null
+        originalCallback = null
     }
 
     private fun registerScreenRecordingDetection(activity: Activity) {
@@ -342,7 +341,6 @@ class ShieldScanModule(private val reactContext: ReactApplicationContext) :
 
         if (fp.contains("generic") ||
             fp.contains("unknown") ||
-            fp.contains("test-keys") ||
             fp.contains("vbox")
         ) return true
 

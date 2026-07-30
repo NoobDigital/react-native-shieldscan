@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+
+## [1.2.0] - 2026-07-30
+
+
+🚀 New in v1.2.0
+
+@noobdigital/react-native-shieldscan v1.2.0 is now live — a stability and accuracy-focused release covering both iOS and Android.
+
+**🔧 Fixed**
+
+- A major stability and reliability update for both Android and iOS. This release focuses on eliminating false positives, improving platform compatibility, and enhancing the user‑experience of sensitive‑screen protection.
+
+**Improvements**
+- Expanded iOS hooking-framework indicator list (Substrate ecosystem, additional Frida/tweak binaries).
+
+**A note on false positives**
+As always, we recommend treating `rooted`, `hooksDetected`, and `fridaDetected` as signals to log and monitor before wiring them into hard blocks. No detection library — including this one — can guarantee zero false positives across every device, OEM skin, and SDK combination in the wild.
+
+
 ## [1.1.0] - 2026-07-13
 
 ### Added

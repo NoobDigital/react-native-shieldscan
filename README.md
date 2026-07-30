@@ -1,15 +1,36 @@
-# @noobdigital/react-native-shieldscan
+<p align="center">
+  <img src="assets/Noob Digital ShieldScan Banner.svg" width="100%" alt="Noob Digital ShieldScan" />
+</p>
 
-[![npm version](https://img.shields.io/npm/v/@noobdigital/react-native-shieldscan.svg)](https://www.npmjs.com/package/@noobdigital/react-native-shieldscan)
-[![npm downloads](https://img.shields.io/npm/dm/@noobdigital/react-native-shieldscan.svg)](https://www.npmjs.com/package/@noobdigital/react-native-shieldscan)
-[![license](https://img.shields.io/npm/l/@noobdigital/react-native-shieldscan.svg)](LICENSE)
-[![platform](https://img.shields.io/badge/platform-ios%20%7C%20android-lightgrey.svg)](https://www.npmjs.com/package/@noobdigital/react-native-shieldscan)
-[![architecture](https://img.shields.io/badge/new%20arch-supported-brightgreen.svg)](https://reactnative.dev/docs/the-new-architecture/landing-page)
+<h1 align="center">@noobdigital/react-native-shieldscan</h1>
 
-Runtime security detection **and screen security** for React Native apps. Detects jailbreak, root, Frida instrumentation, debugger attachment, emulator environments, runtime hooking frameworks, and developer mode — plus background blur, screenshot/recording prevention, and screen recording detection — in a single native module.
 
-Supports **Old Architecture** (Bridge) and **New Architecture** (Turbo Modules / JSI). React Native 0.70+.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@noobdigital/react-native-shieldscan"><img src="https://img.shields.io/npm/v/@noobdigital/react-native-shieldscan.svg" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@noobdigital/react-native-shieldscan"><img src="https://img.shields.io/npm/dm/@noobdigital/react-native-shieldscan.svg" alt="npm downloads" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/npm/l/@noobdigital/react-native-shieldscan.svg" alt="license" /></a>
+  <img src="https://img.shields.io/badge/platform-ios%20%7C%20android-lightgrey.svg" alt="platform" />
+  <img src="https://img.shields.io/badge/new%20arch-supported-brightgreen.svg" alt="architecture" />
+</p>
 
+## Overview
+
+**Noob Digital ShieldScan** is a native security module for React Native that detects compromised runtime environments —
+jailbreak, root, Frida instrumentation, hooking frameworks, and attached debuggers — and provides screen-level
+privacy controls to protect sensitive content from screenshots, screen recording, and the app switcher.
+
+Built for production apps handling payments, credentials, or PII, where knowing the integrity of the device
+matters as much as securing the network layer. Ships as a single native module for both platforms, with a
+weighted risk-scoring engine for tiered enforcement rather than a single pass/fail flag.
+
+Supports Old Architecture (Bridge) and New Architecture (Turbo Modules / JSI). React Native 0.71+.
+
+> **Always install the latest published version.** Detection logic, indicator lists, and platform compatibility
+> are actively maintained — running an older version means missing accuracy fixes and OS-compatibility updates.
+> Check [npm](https://www.npmjs.com/package/@noobdigital/react-native-shieldscan) for the current release before reporting an issue.Also, always check [CHANGELOG.md](CHANGELOG.md) for version-by-version release notes. Highlights of the current release
+
+
+---
 ---
 
 ## Features
@@ -34,21 +55,17 @@ Supports **Old Architecture** (Bridge) and **New Architecture** (Turbo Modules /
 | Screenshot / recording prevention | ✅ Secure `UITextField` layer trick — blank in captures, visible on-device | ✅ `WindowManager.LayoutParams.FLAG_SECURE` — blank in captures **and** in the recents card |
 | Screen recording detection | ✅ `UIScreen.main.isCaptured`, any iOS version | ⚠️ Android 15 (API 35)+ only, via `WindowManager.addScreenRecordingCallback`. Resolves `false` on older OS versions — there is no public API pre-15 |
 
-> **Platform trade-off to know before you ship:** on Android, enabling Screenshot Prevention makes the recents/app-switcher card render fully blank — your Background Blur message **cannot** appear at the same time, because `FLAG_SECURE` blocks the OS from rendering *any* content (including your own overlay) into that snapshot. This is an Android platform restriction, not a bug. iOS has no equivalent conflict — both features work independently there. See [Security Notes](#security-notes) below.
+> Android: `FLAG_SECURE` blanks the recents card entirely — the cover overlay message won't render there if both features are active at once. OS-level restriction, not a bug.
 
 ---
 
 ## Screenshots
 
-Example app running on Android emulator and iOS Simulator. `Running on Emulator: TRUE` confirms emulator detection is working correctly on both platforms.
-
+Example app running on Android emulator and iOS Simulator.
 <p align="center">
   <img src="example/screenshots/Android.png" width="280" alt="ShieldScan on Android" />
   &nbsp;&nbsp;&nbsp;&nbsp;
   <img src="example/screenshots/Ios.png" width="280" alt="ShieldScan on iOS" />
-</p>
-<p align="center">
-  <sub>Android (left) &nbsp;·&nbsp; iOS (right)</sub>
 </p>
 
 ---
@@ -67,22 +84,9 @@ yarn add @noobdigital/react-native-shieldscan
 cd ios && pod install
 ```
 
-Auto-linked via React Native 0.60+ auto-linking. No manual steps required.
+#### Auto-linked via React Native 0.60+ auto-linking. No manual steps required.
 
-### Android
-
-Auto-linked via React Native 0.60+ auto-linking. No manual steps required.
-
-For older setups, register manually in `MainApplication.kt`:
-
-```kotlin
-import com.shieldscan.ShieldScanPackage
-
-// inside getPackages():
-packages.add(ShieldScanPackage())
-```
-
-**Permissions:** the library's own manifest declares `android.permission.DETECT_SCREEN_RECORDING` (a normal, install-time permission — not a runtime prompt, not on Google Play's sensitive-permissions list). Gradle's manifest merger folds this into your app automatically; no action needed in your app's `AndroidManifest.xml`. This permission only enables `isScreenBeingRecorded()` on Android 15+ and has no effect on distribution, review, or user-facing prompts.
+**Android permission:** the module declares `DETECT_SCREEN_RECORDING` (install-time, non-sensitive). Merged automatically — no action needed in your app manifest.
 
 ---
 
@@ -226,7 +230,7 @@ if (isRecording) {
 }
 ```
 
-> Poll-on-demand only — call it when you need the current state (e.g. before revealing a sensitive value), rather than in a tight loop. On Android this requires API 35+ and resolves `false` on older versions, since there is no public detection API pre-Android 15. On iOS it works via `UIScreen.main.isCaptured` on any supported iOS version.
+> Poll-on-demand only — call it when you need the current state (e.g. before revealing a sensitive value), rather than in a tight loop.
 
 ---
 
@@ -238,9 +242,9 @@ Runs all security checks natively in a single call. Resolves with a `SecuritySca
 
 ### `isDeviceCompromised(): Promise<boolean>`
 
-Convenience wrapper. Returns `true` if the risk score is ≥ 30 — meaning any of `rooted`, `fileBasedRoot`, `fridaDetected`, `debugger`, or `hooksDetected` is `true`.
+Convenience wrapper. Returns `true` if the risk score is ≥ 40 — meaning any of `rooted`, `fileBasedRoot`, `fridaDetected`, `debugger`, or `hooksDetected` is `true`.
 
-> **Note:** `emulator` and `developerMode` alone never mark a device as compromised. `emulator` is excluded entirely from scoring. `developerMode` contributes only 5 points — below the 30-point threshold. Check them separately if your threat model requires blocking them.
+> **Note:** `emulator` and `developerMode` alone never mark a device as compromised. `emulator` is excluded entirely from scoring. `developerMode` contributes only 5 points — below the 40-point threshold. Check them separately if your threat model requires blocking them.
 
 ### `getDeviceRiskAssessment(): Promise<CompromisedResult>`
 
@@ -265,8 +269,6 @@ Arms or disarms the background blur cover screen. Resolves with the value passed
 ### `setScreenshotPreventionEnabled(enabled: boolean): Promise<boolean>`
 
 Enables or disables screenshot/recording blocking for the current screen. Resolves with the value passed in. See [usage example](#screen-security--screenshot--recording-prevention-v110) above.
-
-> **Android threading note:** both of these are safe to call from any JS context/thread on the RN side — the native module internally dispatches all view/window mutations to the UI thread. You do not need to guard calls yourself.
 
 ### `isScreenBeingRecorded(): Promise<{ isRecording: boolean }>`
 
@@ -332,7 +334,7 @@ interface SecurityScanResult {
 
 ```typescript
 interface CompromisedResult {
-  /** True if risk score >= 30 */
+  /** True if risk score >= 40 */
   compromised: boolean;
   /** CLEAN | LOW | MEDIUM | HIGH | CRITICAL */
   threatLevel: ThreatLevel;
@@ -352,15 +354,6 @@ interface CompromisedResult {
 A working example app is included in the repository under `example/SampleApp/`.
 
 It demonstrates all seven security checks with a live result screen including risk score card, threat level indicator, and per-check severity badges — plus a Screen Security panel to toggle background blur and screenshot prevention live, and a screen recording status indicator.
-
-```
-example/
-  SampleApp/
-    src/
-      SampleAppScreen.tsx   ← main demo screen
-      assets/
-        noobdigital-logo.png
-```
 
 ### Running the example
 
@@ -382,21 +375,7 @@ cd example/SampleApp && yarn install
 yarn android
 ```
 
----
 
-## Architecture
-
-### Old Architecture (`newArchEnabled=false`)
-
-Module resolved via `NativeModules.ShieldScan` through the standard React Native bridge.
-
-### New Architecture (`newArchEnabled=true`, React Native 0.71+)
-
-Module resolved via `TurboModuleRegistry.get('ShieldScan')` through JSI. The TypeScript spec in `src/NativeShieldScanSpec.ts` drives codegen for type-safe native bindings with zero bridge serialisation overhead.
-
-The package detects which architecture is active at runtime and selects the appropriate resolution path automatically.
-
-> **Android TurboModule threading:** under the New Architecture, `@ReactMethod` calls run on the native-modules thread, not the UI thread. `setBlurEnabled` and `setScreenshotPreventionEnabled` account for this internally (via `runOnUiThread`) so they're safe to call regardless of architecture — this is handled for you, not something consumers need to work around.
 
 ---
 
@@ -406,7 +385,7 @@ The package detects which architecture is active at runtime and selects the appr
 `hooksDetected` returns `false` on BrowserStack, LambdaTest, Firebase Test Lab, AWS Device Farm real devices, and any device with ADB enabled, developer options on, or corporate/MDM certificates installed. Only genuine hooking framework artifacts trigger this signal.
 
 **`developerMode` in production**
-`developerMode: true` alone does not mark a device as compromised — it contributes only 5 points to the risk score, well below the 30-point threshold. It is an informational signal. Guard hard blocks with `!__DEV__` to avoid blocking your own development workflow.
+`developerMode: true` alone does not mark a device as compromised — it contributes only 5 points to the risk score, well below the 40-point threshold. It is an informational signal. Guard hard blocks with `!__DEV__` to avoid blocking your own development workflow.
 
 **Simulator / emulator**
 `emulator: true` never contributes to the risk score. It is excluded from `isDeviceCompromised()`. Many teams run QA on emulators — this signal is informational only unless you explicitly require blocking it.
@@ -454,20 +433,6 @@ Developed and validated against OWASP Mobile Top 10:
 ## Contributing
 
 Pull requests are welcome.
-
-Before submitting:
-
-```sh
-yarn lint        # must pass
-yarn typecheck   # must pass
-yarn test        # must pass
-```
-
-New detection checks must include:
-- Native implementation for both iOS (Swift) and Android (Kotlin)
-- Corresponding field in `SecurityScanResult` TypeScript interface
-- Unit tests in `__tests__/`
-- Documentation update in this README
 
 ---
 

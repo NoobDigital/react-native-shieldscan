@@ -1,0 +1,82 @@
+<svg width="900" height="220" viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B1220"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <radialGradient id="pulse" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="shieldClip">
+      <path d="M110 40 L150 55 L150 100 C150 130 132 152 110 162 C88 152 70 130 70 100 L70 55 Z"/>
+    </clipPath>
+  </defs>
+
+  <rect width="900" height="220" fill="url(#bg)"/>
+
+
+  <!-- pulse rings behind shield -->
+  <circle cx="110" cy="110" r="10" fill="url(#pulse)">
+    <animate attributeName="r" values="10;80;10" dur="2.8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.8;0;0.8" dur="2.8s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- shield -->
+  <path d="M110 50 L150 65 L150 110 C150 140 132 162 110 172 C88 162 70 140 70 110 L70 65 Z"
+        fill="url(#shieldGrad)" stroke="#E0F7FA" stroke-width="2"/>
+
+  <!-- scan sweep line inside shield -->
+  <g clip-path="url(#shieldClip)" transform="translate(0,10)">
+    <rect x="60" y="30" width="100" height="6" fill="#F0FDFF" opacity="0.85">
+      <animate attributeName="y" values="30;150;30" dur="2.4s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- checkmark -->
+  <path d="M92 110 L104 124 L130 92" fill="none" stroke="#F0FDFF" stroke-width="6"
+        stroke-linecap="round" stroke-linejoin="round">
+    <animate attributeName="stroke-dasharray" values="0,60;60,60" dur="1.2s" begin="0.6s" fill="freeze"/>
+  </path>
+
+  <!-- title text -->
+  <text x="200" y="105" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#F8FAFC">
+    Noob Digital ShieldScan
+  </text>
+  <text x="200" y="138" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#94A3B8">
+    Runtime security &amp; screen protection for React Native Apps
+  </text>
+
+  <!-- status dots -->
+  <g font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#67E8F9">
+    <circle cx="205" cy="170" r="4" fill="#34D399">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite"/>
+    </circle>
+    <text x="216" y="174">Jailbreak / Root</text>
+
+    <circle cx="365" cy="170" r="4" fill="#34D399">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.6s" begin="0.3s" repeatCount="indefinite"/>
+    </circle>
+    <text x="376" y="174">Frida &amp; Hooks</text>
+
+    <circle cx="505" cy="170" r="4" fill="#34D399">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.6s" begin="0.6s" repeatCount="indefinite"/>
+    </circle>
+    <text x="516" y="174">Debugger</text>
+
+    <circle cx="630" cy="170" r="4" fill="#34D399">
+      <animate attributeName="opacity" values="1;0.3;1" dur="1.6s" begin="0.9s" repeatCount="indefinite"/>
+    </circle>
+    <text x="641" y="174">Screen Security</text>
+  </g>
+    <!-- powered-by line, bottom center -->
+  <a xlink:href="https://noobdigital.com/" target="_blank">
+    <text x="450" y="205" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#64748B" text-anchor="middle">
+      Powered by noobdigital.com
+    </text>
+  </a>
+</svg>
