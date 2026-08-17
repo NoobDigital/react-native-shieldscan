@@ -434,6 +434,15 @@ Developed and validated against OWASP Mobile Top 10:
 
 Pull requests are welcome.
 
+
+## Support
+
+If this project helped you, consider supporting its development.
+
+<a href="https://buymeacoffee.com/maheshvirus">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" alt="Buy Me A Coffee" />
+</a>
+
 ---
 
 ## License
